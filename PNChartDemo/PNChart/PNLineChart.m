@@ -160,7 +160,7 @@
         [progressline setLineCapStyle:kCGLineCapRound];
         [progressline setLineJoinStyle:kCGLineJoinRound];
 
-        
+        CGFloat xStep = self.frame.size.width / (chartData.itemCount - 1);
         NSInteger index = 0;
         for (NSUInteger i = 0; i < chartData.itemCount; i++) {
 
@@ -169,7 +169,7 @@
 
             CGFloat innerGrade = value / _yValueMax;
             if (index != 0) {
-                CGPoint point = CGPointMake(index * _xLabelWidth + 30.0 + _xLabelWidth / 2.0, _chartCavanHeight - (innerGrade * _chartCavanHeight) + _xLabelHeight);
+                CGPoint point = CGPointMake(index * xStep, _chartCavanHeight - (innerGrade * _chartCavanHeight) + _xLabelHeight);
                 [linePointsArray addObject:[NSValue valueWithCGPoint:point]];
                 [progressline addLineToPoint:point];
                 [progressline moveToPoint:point];
