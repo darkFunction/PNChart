@@ -12,6 +12,8 @@
 #import "PNLineChartData.h"
 #import "PNLineChartDataItem.h"
 
+#define kYLabelWidth (20.f)
+#define kXLabelHeight (20.f)
 
 //------------------------------------------------------------------------------------------------
 // private interface declaration
@@ -61,7 +63,10 @@
 	NSInteger num = [yLabels count] + 1;
 	while (num > 0) {
 		CGFloat levelHeight = _chartCavanHeight /5.0;
-		PNChartLabel * label = [[PNChartLabel alloc] initWithFrame:CGRectMake(0.0,_chartCavanHeight - index * levelHeight + (levelHeight - yLabelHeight) , 20.0, yLabelHeight)];
+		PNChartLabel * label = [[PNChartLabel alloc] initWithFrame:CGRectMake(0.0,
+                                                                              _chartCavanHeight - index * levelHeight + (levelHeight - yLabelHeight),
+                                                                              kYLabelWidth,
+                                                                              yLabelHeight)];
 		[label setTextAlignment:NSTextAlignmentRight];
 		label.text = [NSString stringWithFormat:@"%1.f",level * index];
 		[self addSubview:label];
@@ -81,7 +86,7 @@
         for(int index = 0; index < xLabels.count; index++)
         {
             NSString* labelText = xLabels[index];
-            PNChartLabel * label = [[PNChartLabel alloc] initWithFrame:CGRectMake(index * _xLabelWidth + 30.0, self.frame.size.height - 30.0, _xLabelWidth, 20.0)];
+            PNChartLabel * label = [[PNChartLabel alloc] initWithFrame:CGRectMake(index * _xLabelWidth + 30.0, self.frame.size.height - 30.0, _xLabelWidth, kXLabelHeight)];
             [label setTextAlignment:NSTextAlignmentCenter];
             label.text = labelText;
             [self addSubview:label];
@@ -140,8 +145,12 @@
 
 -(void)strokeChart
 {
-    _chartPath = [[NSMutableArray alloc] init];
-    //Draw each line
+    _chartPath = [NSMutableArray array];
+    [_pathPoints removeAllObjects];
+    
+    CGFloat xPosition = self.showLabel ? (kYLabelWidth + 10) : 0;
+    
+    // Draw each line
     for (NSUInteger lineIndex = 0; lineIndex < self.chartData.count; lineIndex++) {
         PNLineChartData *chartData = self.chartData[lineIndex];
         CAShapeLayer *chartLine = (CAShapeLayer *) self.chartLineArray[lineIndex];
@@ -153,11 +162,8 @@
         PNLineChartDataItem *firstDataItem = chartData.getData(0);
         CGFloat firstValue = firstDataItem.y;
 
-        CGFloat xPosition = _xLabelWidth;
-
         if(!_showLabel){
             _chartCavanHeight = self.frame.size.height  - _xLabelHeight*2;
-            xPosition = 0;
         }
 
         CGFloat grade = (float)firstValue / _yValueMax;
@@ -168,7 +174,7 @@
         [progressline setLineCapStyle:kCGLineCapRound];
         [progressline setLineJoinStyle:kCGLineJoinRound];
 
-        CGFloat xStep = self.frame.size.width / (chartData.itemCount - 1);
+        CGFloat xStep = (self.frame.size.width - xPosition) / (chartData.itemCount - 1);
         NSInteger index = 0;
         for (NSUInteger i = 0; i < chartData.itemCount; i++) {
 
@@ -177,7 +183,7 @@
 
             CGFloat innerGrade = value / _yValueMax;
             if (index != 0) {
-                CGPoint point = CGPointMake(index * xStep, _chartCavanHeight - (innerGrade * _chartCavanHeight) + _xLabelHeight);
+                CGPoint point = CGPointMake(xPosition + (index * xStep), _chartCavanHeight - (innerGrade * _chartCavanHeight) + _xLabelHeight);
                 [linePointsArray addObject:[NSValue valueWithCGPoint:point]];
                 [progressline addLineToPoint:point];
                 [progressline moveToPoint:point];
@@ -263,11 +269,11 @@
     // Initialization code
     self.backgroundColor = [UIColor whiteColor];
     self.clipsToBounds   = YES;
-    self.chartLineArray  = [NSMutableArray new];
+    self.chartLineArray  = [NSMutableArray array];
     _showLabel           = YES;
-    _pathPoints = [[NSMutableArray alloc] init];
+    _pathPoints = [NSMutableArray array];
     self.userInteractionEnabled = YES;
-    _xLabelHeight = 20.0;
+    _xLabelHeight = kXLabelHeight;
     _chartCavanHeight = self.frame.size.height - chartMargin * 2 - _xLabelHeight*2 ;
 }
 
