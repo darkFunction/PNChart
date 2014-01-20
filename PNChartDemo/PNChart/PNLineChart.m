@@ -95,12 +95,20 @@
 
 -(void)touchesBegan:(NSSet *)touches withEvent:(UIEvent *)event
 {
-    [self touchPoint:touches withEvent:event];
+    if (self.delegate) {
+        [self touchPoint:touches withEvent:event];
+    } else {
+        [super touchesBegan:touches withEvent:event];
+    }
 }
 
 -(void)touchesMoved:(NSSet *)touches withEvent:(UIEvent *)event
 {
-    [self touchPoint:touches withEvent:event];
+    if (self.delegate) {
+        [self touchPoint:touches withEvent:event];
+    } else {
+        [super touchesMoved:touches withEvent:event];
+    }
 }
 
 -(void)touchPoint:(NSSet *)touches withEvent:(UIEvent *)event
