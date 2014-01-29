@@ -11,9 +11,11 @@
 #import "PNChartLabel.h"
 #import "PNLineChartData.h"
 #import "PNLineChartDataItem.h"
+#import "UIBezierPath+Smoothing.h"
 
 #define kYLabelWidth (20.f)
 #define kXLabelHeight (20.f)
+#define kyLabelTag (1)
 
 //------------------------------------------------------------------------------------------------
 // private interface declaration
@@ -54,26 +56,30 @@
 
 #pragma mark instance methods
 
--(void)setYLabels:(NSArray *)yLabels
-{
-
+-(void)setYLabels:(NSArray *)yLabels {
+    for (UIView* subview in self.subviews) {
+        if (subview.tag == kyLabelTag) {
+            [subview removeFromSuperview];
+        }
+    }
+    
     float level = _yValueMax / 5.0;
-	
+    
     NSInteger index = 0;
 	NSInteger num = [yLabels count] + 1;
 	while (num > 0) {
 		CGFloat levelHeight = _chartCavanHeight /5.0;
 		PNChartLabel * label = [[PNChartLabel alloc] initWithFrame:CGRectMake(0.0,
-                                                                              _chartCavanHeight - index * levelHeight + (levelHeight - yLabelHeight),
+                                                                              _chartCavanHeight - index * levelHeight + (levelHeight/2 - yLabelHeight/2),
                                                                               kYLabelWidth,
                                                                               yLabelHeight)];
 		[label setTextAlignment:NSTextAlignmentRight];
 		label.text = [NSString stringWithFormat:@"%1.f",level * index];
 		[self addSubview:label];
+        label.tag = kyLabelTag;
         index +=1 ;
 		num -= 1;
 	}
-
 }
 
 -(void)setXLabels:(NSArray *)xLabels
@@ -143,7 +149,7 @@
     
 }
 
--(void)strokeChart
+-(void)strokeChartAnimated:(BOOL)animated
 {
     _chartPath = [NSMutableArray array];
     [_pathPoints removeAllObjects];
@@ -156,8 +162,8 @@
         CAShapeLayer *chartLine = (CAShapeLayer *) self.chartLineArray[lineIndex];
 
         UIGraphicsBeginImageContext(self.frame.size);
-        UIBezierPath * progressline = [UIBezierPath bezierPath];
-        [_chartPath addObject:progressline];
+        UIBezierPath * bezierPath = [UIBezierPath bezierPath];
+        [_chartPath addObject:bezierPath];
         
         PNLineChartDataItem *firstDataItem = chartData.getData(0);
         CGFloat firstValue = firstDataItem.y;
@@ -168,13 +174,11 @@
 
         CGFloat grade = (float)firstValue / _yValueMax;
         NSMutableArray * linePointsArray = [[NSMutableArray alloc] init];
-        [progressline moveToPoint:CGPointMake( xPosition, _chartCavanHeight - grade * _chartCavanHeight + _xLabelHeight)];
+        [bezierPath moveToPoint:CGPointMake( xPosition, _chartCavanHeight - grade * _chartCavanHeight + _xLabelHeight)];
         [linePointsArray addObject:[NSValue valueWithCGPoint:CGPointMake( xPosition, _chartCavanHeight - grade * _chartCavanHeight + _xLabelHeight)]];
-        [progressline setLineWidth:3.0];
-        [progressline setLineCapStyle:kCGLineCapRound];
-        [progressline setLineJoinStyle:kCGLineJoinRound];
 
-        CGFloat xStep = (self.frame.size.width - xPosition) / (chartData.itemCount - 1);
+        CGFloat w = self.frame.size.width - (_showLabel ? yLabelMargin : 0);
+        CGFloat xStep = (w - xPosition) / (chartData.itemCount - 1);
         NSInteger index = 0;
         for (NSUInteger i = 0; i < chartData.itemCount; i++) {
 
@@ -185,8 +189,8 @@
             if (index != 0) {
                 CGPoint point = CGPointMake(xPosition + (index * xStep), _chartCavanHeight - (innerGrade * _chartCavanHeight) + _xLabelHeight);
                 [linePointsArray addObject:[NSValue valueWithCGPoint:point]];
-                [progressline addLineToPoint:point];
-                [progressline moveToPoint:point];
+                [bezierPath addLineToPoint:point];
+                [bezierPath moveToPoint:point];
             }
             index += 1;
         }
@@ -198,17 +202,15 @@
             chartLine.strokeColor = [PNGreen CGColor];
         }
 
-        [progressline stroke];
-
-        chartLine.path = progressline.CGPath;
-
-        CABasicAnimation *pathAnimation = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
-        pathAnimation.duration = 1.0;
-        pathAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
-        pathAnimation.fromValue = [NSNumber numberWithFloat:0.0f];
-        pathAnimation.toValue = [NSNumber numberWithFloat:1.0f];
-        [chartLine addAnimation:pathAnimation forKey:@"strokeEndAnimation"];
-
+        chartLine.path = bezierPath.CGPath;
+        if (animated) {
+            CABasicAnimation *pathAnimation = [CABasicAnimation animationWithKeyPath:@"strokeEnd"];
+            pathAnimation.duration = 1.5f;
+            pathAnimation.timingFunction = [CAMediaTimingFunction functionWithName:kCAMediaTimingFunctionEaseInEaseOut];
+            pathAnimation.fromValue = [NSNumber numberWithFloat:0.0f];
+            pathAnimation.toValue = [NSNumber numberWithFloat:1.0f];
+            [chartLine addAnimation:pathAnimation forKey:@"strokeEndAnimation"];
+        }
         chartLine.strokeEnd = 1.0;
 
         UIGraphicsEndImageContext();
@@ -232,7 +234,7 @@
             // create as many chart line layers as there are data-lines
             CAShapeLayer *chartLine = [CAShapeLayer layer];
             chartLine.lineCap   = kCALineCapRound;
-            chartLine.lineJoin  = kCALineJoinBevel;
+            chartLine.lineJoin  = kCALineJoinRound;
             chartLine.fillColor = [[UIColor whiteColor] CGColor];
             chartLine.lineWidth = 3.0;
             chartLine.strokeEnd = 0.0;

@@ -21,7 +21,7 @@
  * This method will call and troke the line in animation
  */
 
-- (void)strokeChart;
+- (void)strokeChartAnimated:(BOOL)animated;
 
 @property(nonatomic,retain) id<PNChartDelegate> delegate;
 
