@@ -63,18 +63,18 @@
         }
     }
     
-    float level = _yValueMax / 5.0;
+    float level = (_yValueMax - _yValueMin) / 5.0;
     
     NSInteger index = 0;
 	NSInteger num = [yLabels count] + 1;
 	while (num > 0) {
-		CGFloat levelHeight = _chartCavanHeight /5.0;
+		CGFloat levelHeight = _chartCavanHeight / 5.0;
 		PNChartLabel * label = [[PNChartLabel alloc] initWithFrame:CGRectMake(0.0,
                                                                               _chartCavanHeight - index * levelHeight + (levelHeight/2 - yLabelHeight/2),
                                                                               kYLabelWidth,
                                                                               yLabelHeight)];
 		[label setTextAlignment:NSTextAlignmentRight];
-		label.text = [NSString stringWithFormat:@"%1.f",level * index];
+		label.text = [NSString stringWithFormat:@"%1.f",_yValueMin+(level * index)];
 		[self addSubview:label];
         label.tag = kyLabelTag;
         index +=1 ;
@@ -149,15 +149,26 @@
     
 }
 
+- (CGFloat)yPositionForDataItem:(PNLineChartDataItem*)item {
+    CGFloat span = _yValueMax - _yValueMin;
+    CGFloat yPosition = (_chartCavanHeight / span) * (item.y - _yValueMin);
+    return _chartCavanHeight - yPosition + _xLabelHeight;
+}
+
 -(void)strokeChartAnimated:(BOOL)animated
 {
     _chartPath = [NSMutableArray array];
     [_pathPoints removeAllObjects];
     
     CGFloat xPosition = self.showLabel ? (kYLabelWidth + 10) : 0;
+
+    if(!_showLabel){
+        _chartCavanHeight = self.frame.size.height  - _xLabelHeight*2;
+    }
     
     // Draw each line
     for (NSUInteger lineIndex = 0; lineIndex < self.chartData.count; lineIndex++) {
+        
         PNLineChartData *chartData = self.chartData[lineIndex];
         CAShapeLayer *chartLine = (CAShapeLayer *) self.chartLineArray[lineIndex];
 
@@ -166,16 +177,11 @@
         [_chartPath addObject:bezierPath];
         
         PNLineChartDataItem *firstDataItem = chartData.getData(0);
-        CGFloat firstValue = firstDataItem.y;
-
-        if(!_showLabel){
-            _chartCavanHeight = self.frame.size.height  - _xLabelHeight*2;
-        }
-
-        CGFloat grade = (float)firstValue / _yValueMax;
+        
+        CGFloat yPosition = [self yPositionForDataItem:firstDataItem];
         NSMutableArray * linePointsArray = [[NSMutableArray alloc] init];
-        [bezierPath moveToPoint:CGPointMake( xPosition, _chartCavanHeight - grade * _chartCavanHeight + _xLabelHeight)];
-        [linePointsArray addObject:[NSValue valueWithCGPoint:CGPointMake( xPosition, _chartCavanHeight - grade * _chartCavanHeight + _xLabelHeight)]];
+        [bezierPath moveToPoint:CGPointMake( xPosition, yPosition)];
+        [linePointsArray addObject:[NSValue valueWithCGPoint:CGPointMake( xPosition, yPosition)]];
 
         CGFloat w = self.frame.size.width - (_showLabel ? yLabelMargin : 0);
         CGFloat xStep = (w - xPosition) / (chartData.itemCount - 1);
@@ -183,11 +189,9 @@
         for (NSUInteger i = 0; i < chartData.itemCount; i++) {
 
             PNLineChartDataItem *dataItem = chartData.getData(i);
-            float value = dataItem.y;
 
-            CGFloat innerGrade = value / _yValueMax;
             if (index != 0) {
-                CGPoint point = CGPointMake(xPosition + (index * xStep), _chartCavanHeight - (innerGrade * _chartCavanHeight) + _xLabelHeight);
+                CGPoint point = CGPointMake(xPosition + (index * xStep), [self yPositionForDataItem:dataItem]);
                 [linePointsArray addObject:[NSValue valueWithCGPoint:point]];
                 [bezierPath addLineToPoint:point];
                 [bezierPath moveToPoint:point];
@@ -221,7 +225,8 @@
     if (data != _chartData) {
 
         NSMutableArray *yLabelsArray = [NSMutableArray arrayWithCapacity:data.count];
-        CGFloat yMax = 0.0f;
+        CGFloat yMax = 0.f;
+        CGFloat yMin = HUGE_VALF;
 
         // remove all shape layers before adding new ones
         for (CALayer *layer in self.chartLineArray) {
@@ -246,15 +251,13 @@
                 CGFloat yValue = dataItem.y;
                 [yLabelsArray addObject:[NSString stringWithFormat:@"%2f", yValue]];
                 yMax = fmaxf(yMax, dataItem.y);
+                yMin = fminf(yMin, dataItem.y);
             }
         }
 
-        // Min value for Y label
-        if (yMax < 5) {
-            yMax = 5.0f;
-        }
         _yValueMax = yMax;
-
+        _yValueMin = yMin;
+        
         _chartData = data;
 
         if (_showLabel) {

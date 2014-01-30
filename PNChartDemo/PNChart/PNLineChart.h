@@ -39,6 +39,7 @@
 @property (nonatomic) CGFloat xLabelWidth;
 
 @property (nonatomic) float yValueMax;
+@property (nonatomic) float yValueMin;
 
 @property (nonatomic) float chartCavanHeight;
 
